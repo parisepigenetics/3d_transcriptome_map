@@ -8,19 +8,16 @@ import math
 import pandas as pd
 
 
-def compute_gene_coordinates(start_sites_Genes, pos_file_Genome3D, resolution):
+def compute_gene_coordinates(dfGenes, dfGenome, resolution):
     """Get two tab files, one with the gene names and their respective start sites and one with the 3D genome coordinates (as midpoints of fragments of fixed length i.e. resolution).
     
     - Args:
-    - `starts_sites_Genes`: The file path to the gene names and start sites tab file.
-    - `pos_file_Genome3D`: The file path to the 3D genome coordinates tab file.
+    - `starts_sites_Genes`: A gene names and start sites data frame.
+    - `dfGenome3D`: The 3D genome coordinates data frame.
     - `resolution`: The fixed length of the fragments used for 3D genome coordinates.
     - Return:
     - A DataFrame with the 3D coordinates of genes.
     """
-    dfGenome = pd.read_table(pos_file_Genome3D)
-    dfGenes = pd.read_table(start_sites_Genes)
-    # First simple approach, the gene is assigned to its closest bin median point.
     # Check chromosome consistancy
     chromsGenome = list(set(dfGenome.loc[:, "chr"].tolist()))
     chromsGenes = list(set(dfGenes.loc[:, "chr"].tolist()))
@@ -43,6 +40,7 @@ def compute_gene_coordinates(start_sites_Genes, pos_file_Genome3D, resolution):
                     pointBefor = point
                     pointAfter = dfChromGenome[dfChromGenome["midpoint"] == point.midpoint + resolution]
                     break
+            # A geometric approach to translate gene start bps coordinates to correct proportional point on the genome segment in 3D spce.
             xb, yb, zb = pointBefor.X, pointBefor.Y, pointBefor.Z
             xa, ya, za = pointAfter.iloc[0].X, pointAfter.iloc[0].Y, pointAfter.iloc[0].Z
             distance = math.sqrt((xa - xb)**2 + (ya - yb)**2 + (za - zb)**2)
@@ -58,7 +56,4 @@ def compute_gene_coordinates(start_sites_Genes, pos_file_Genome3D, resolution):
     # Generate the new data frame and reurn it
     df = pd.DataFrame({"chr": chr, "start": starts, "X": Xs, "Y": Ys, "Z": Zs})
     df.index = names
-    # Reset the files as they needed for later computations
-    pos_file_Genome3D.seek(0)
-    start_sites_Genes.seek(0)
     return df

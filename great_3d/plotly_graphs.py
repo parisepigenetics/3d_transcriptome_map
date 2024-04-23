@@ -34,7 +34,7 @@ def get_significant_corr_genes(corSumsDict, coef=2):
 
 
 @timing
-def visualise_genome_3D(genome_coords_file):
+def visualise_genome_3D(genome_coords):
     """Generate the contour for the 3D genome.
 
     Genome coordinates file must contain a column named "chr" with the different chromosome names
@@ -44,7 +44,7 @@ def visualise_genome_3D(genome_coords_file):
     - The trace of the genoome 3D contour.
     """
     # Build the genome contur trace
-    pos_dt = pd.read_table(genome_coords_file)
+    pos_dt = genome_coords
     chroms = pos_dt.loc[:, "chr"].tolist()
     # Generate the chromosome traces
     chromosomes = list(set(chroms))
@@ -88,8 +88,12 @@ def visualise_genes(pos_df):
 
 
 def visulise_correlation(position_df, correlation_dict):
-    # Generate the genes traces
-    # FIXME find a way to deal with gene ovelarps (perhaps introduce a jitter as a quick fix.)
+    """Generate the correlation trace.
+
+    Arguments:
+        position_df -- _description_
+        correlation_dict -- _description_
+    """
     nearGenes = []
     pos_df = position_df
     for gene_ref in correlation_dict:

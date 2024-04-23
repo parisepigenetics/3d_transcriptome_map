@@ -8,11 +8,11 @@ Take a 3D gene positions file and a gene expression matrix, compute spatial corr
 import argparse
 import pandas as pd
 import plotly.graph_objects as go
-from dash import Dash, dcc, html, dash_table
+from dash import Dash, dcc, html, dash_table, Input, Output, callback
 import dash_bootstrap_components as dbc
 
 # Import package specific py_modules
-import great_3d.genome_3D_integration as grtGI
+import great_3d.genome_3D_integration as greatGI
 import great_3d.base_calulations as greatCalc
 import great_3d.plotly_graphs as greatPlot
 
@@ -76,11 +76,19 @@ parser.add_argument("-t", "--title",
 
 # Generate the options-arguments object
 args = parser.parse_args()
+
+# Read all input files and put them into data frames (more neat for the callbacks)
+with args.genome as fh:
+    genomePos = pd.read_table(fh)
+with args.geneExpr as fh:
+    geneExpr = pd.read_table(fh)
+with args.geneStarts as fh:
+    geneStarts = pd.read_table(fh)
 # Calculate if needed the gene 3D coordinates
 if args.genePos:
     genePos = pd.read_table(args.genePos)
 elif args.geneStarts:
-    genePos = grtGI.compute_gene_coordinates(args.geneStarts, args.genome, args.resolution)
+    genePos = greatGI.compute_gene_coordinates(geneStarts, genomePos, args.resolution)
 else:
     raise IOError("One of --gene-3Dcoords or --gene-starts arguments must be declared.")
 
@@ -127,74 +135,89 @@ distanceMatrix = greatCalc.calculate_distance(genePos)
 # Populate the dictionary of sorted distances.
 sortedDict = greatCalc.sorting_distances(distanceMatrix)
 # Compute a dictionnary of the sum of correlations between each gene and its neighbours.
-sum_Corr = greatCalc.sum_correlation(sortedDict, args.geneExpr, args.nGenes, args.mCorr)
-
-# Visualisations:
-# Compute all visualisation tracks (traces)
-traceGenome = greatPlot.visualise_genome_3D(args.genome)
-traceGenes = greatPlot.visualise_genes(genePos)
-# genePos, sum_Corr, args.userGenes)
-# 3D visualization with Plotly
-fig = visualise_3D([traceGenome, traceGenes])
+sum_Corr = greatCalc.sum_correlation(sortedDict, geneExpr, args.nGenes, args.mCorr)
 
 
 # FIXME just to practice tables visualisation remove that later perhaps
-args.geneExpr.seek(0)
-with args.geneExpr as fh:
-    df = pd.read_table(fh)
-df.reset_index(inplace=True)
-df.rename(columns={"index":"Gene Name"}, inplace=True)
+geneExpr.reset_index(inplace=True)
+geneExpr.rename(columns={"index":"Gene Name"}, inplace=True)
 
 
 # Dash application
 # TODO Enrich the Dash application with, controls (radio buttons, sliders, etc.), input files and proress bars!!!
 app = Dash("GREAT3D", external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.layout = html.Div([
-        html.H3(html.B("GREAT 3D Transcriptome Map")),
-        html.H2(args.title, style={'textAlign': 'center'}),
-        html.Hr(),
-        dbc.Row([
-            dbc.Col(html.Div([
-                dcc.Graph(id='dash_GREAT', figure=fig)
-                ]),
-                    width=9),
-            dbc.Col(html.Div([
-                html.H3("Options"),
-                html.Hr(),
-                html.Label('Tracks:', style={'paddingTop': '2rem', 'display': 'inline-block'}),
-                dcc.Checklist(
-                    id='input_track',
-                    options=[
-                        {'label': 'Genes', 'value': 'genes'},
-                        {'label': 'Correlation', 'value': 'corr'},
-                        {'label': '|Correlation|', 'value': 'absCorr'}
-                        ],
-                    value=['genes', 'corr', 'absCorr'])
-                ]), 
-                    width=3)
+    html.H3(html.B("GREAT 3D Transcriptome Map")),
+    html.H2(args.title, style={'textAlign': 'center'}),
+    html.Hr(),
+    dbc.Row([
+        dbc.Col(html.Div([
+            dcc.Graph(id='dash_GREAT')
             ]),
-        html.Hr(),
-        html.H3("Expression Data"),
-        dash_table.DataTable(
-            data=df.to_dict('records'),
-            page_size=20,
-            id='expression_data',
-            columns=[{"name": i, "id": i} for i in df.columns],
-            style_table={'overflow': 'scroll', 'height': 800},
-            style_header={'font_size': '14px', 'backgroundColor': '#305D91', 'padding': '15px', 'color': '#FFFFFF'},
-            style_cell={'textAlign': 'center', 'minWidth': 60, 'maxWidth': 400, 'width': 90, 'font_size': '12px', 'whiteSpace': 'normal', 'height': 'auto', 'padding': '10px'},
-            filter_action="native",      # allow filtering of data by user ('native') or not ('none')
-            sort_action="native",        # enables data to be sorted per-column by user or not ('none')
-            sort_mode="single",          # sort across 'multi' or 'single' columns
-            column_selectable="single",  # allow users to select 'multi' or 'single' columns
-            row_selectable="multi",      # allow users to select 'multi' or 'single' rows
-            selected_columns=[],         # ids of columns that user selects
-            selected_rows=[],            # indices of rows that user selects
-            fill_width=False,
-            page_action="native")
+                width=9),
+        dbc.Col(html.Div([
+            html.H3("Options"),
+            html.Hr(),
+            html.Label('Tracks:', style={'paddingTop': '2rem', 'display': 'inline-block'}),
+            dcc.Checklist(
+                id='input_track',
+                options=[
+                    {'label': ' Genome', 'value': 'genome'},
+                    {'label': ' Genes', 'value': 'genes'},
+                    {'label': ' Correlation', 'value': 'corr'},
+                    {'label': ' |Correlation|', 'value': 'absCorr'}
+                    ],
+                value=['genome'])
+            ]),
+                width=3)
+        ]),
+    html.Hr(),
+    html.H3("Expression Data"),
+    dash_table.DataTable(
+        data=geneExpr.to_dict('records'),
+        page_size=20,
+        id='expression_data',
+        columns=[{"name": i, "id": i} for i in geneExpr.columns],
+        style_table={'overflow': 'scroll', 'height': 800},
+        style_header={'font_size': '14px', 'backgroundColor': '#305D91', 'padding': '15px', 'color': '#FFFFFF'},
+        style_cell={'textAlign': 'center', 'minWidth': 60, 'maxWidth': 400, 'width': 90, 'font_size': '12px', 'whiteSpace': 'normal', 'height': 'auto', 'padding': '10px'},
+        filter_action="native",      # allow filtering of data by user ('native') or not ('none')
+        sort_action="native",        # enables data to be sorted per-column by user or not ('none')
+        sort_mode="single",          # sort across 'multi' or 'single' columns
+        column_selectable="single",  # allow users to select 'multi' or 'single' columns
+        row_selectable="multi",      # allow users to select 'multi' or 'single' rows
+        selected_columns=[],         # ids of columns that user selects
+        selected_rows=[],            # indices of rows that user selects
+        fill_width=False,
+        page_action="native")
 ])
 
+
 # TODO here will go the callbacks
+@callback(
+    Output('dash_GREAT', 'figure'),
+    Input('input_track', 'value')
+)
+def update_tracks(selected_tracks):
+    # Visualisations:
+    tracks = []
+    if "genome" in selected_tracks:
+        # Compute genome visualisation track (trace)
+        traceGenome = greatPlot.visualise_genome_3D(genomePos)
+        tracks.append(traceGenome)
+    if "genes" in selected_tracks:
+        # Compute genes position track
+        traceGenes = greatPlot.visualise_genes(genePos)
+        tracks.append(traceGenes)
+#    if "corr" in selected_tracks:
+#        pass  # genePos, sum_Corr, args.userGenes)
+#    if "absCorr" in selected_tracks:
+#        pass
+    # 3D visualization with Plotly
+    fig = visualise_3D(tracks)
+    fig.update_layout(transition_duration=10)
+    return fig
+
 
 if __name__ == '__main__':
-    app.run()  # (debug=True)
+    app.run(debug=True)

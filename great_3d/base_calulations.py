@@ -51,13 +51,13 @@ def sorting_distances(dist_df):
 
 
 @timing
-def sum_correlation(dists_sorted, ge_file, no_genes, correlation_type):
+def sum_correlation(dists_sorted, geDF, no_genes, correlation_type):
     """Take the dictionnary of the closest genes, the gene expression file, the
     number of genes we need to compute correlation and the correlation type.
 
     - Args:
     - `dists_sorted`: The dictionary of the closest genes.
-    - `ge_file`: The gene expression file.
+    - `geDF`: The gene expression pandas data frame.
     - `no_genes`: The number of genes to compute correlation.
     - `correlation_type`: The correlation type.
 
@@ -65,8 +65,6 @@ def sum_correlation(dists_sorted, ge_file, no_genes, correlation_type):
     - A complex dictionary containing the sum of correlations, the sum of
     absolute correlations, and the neighboring genes for each gene.
     """
-    # Read the GE file
-    geDF = pd.read_table(ge_file)
     # FIXME If a gene has zero expression we give it zero correlation immediately
     geNumpy = geDF.to_numpy()
     corrMnp = np.corrcoef(geNumpy)
