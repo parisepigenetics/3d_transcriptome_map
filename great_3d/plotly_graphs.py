@@ -2,7 +2,6 @@
 
 import plotly
 import plotly.graph_objects as go
-import pandas as pd
 import numpy as np
 
 # import pprint  # for testing only!
@@ -37,7 +36,7 @@ def get_significant_corr_genes(corSumsDict, coef=2):
 def visualise_genome_3D(genome_coords):
     """Generate the contour for the 3D genome.
 
-    Genome coordinates file must contain a column named "chr" with the different chromosome names
+    Genome coordinates file must contain a column named "Chr" with the different chromosome names
     - Args:
     - `genome_coords_file`: The file path to the genome coordinates file.
     - Return:
@@ -75,76 +74,65 @@ def visualise_genes(pos_df):
     Y = pos_df.loc[:, "Y"]
     Z = pos_df.loc[:, "Z"]
     htxt = [f"{n}<br>{s:,}" for n, s in zip(pos_df.index, pos_df.loc[:, "start"])]
-    return go.Scatter3d(x=X,
-                        y=Y,
-                        z=Z,
+    return go.Scatter3d(x=X, y=Y, z=Z,
                         ids=pos_df.index.values,
                         mode="markers",
-                        opacity=0.6,
-                        marker=dict(size=5, color="lightseagreen", line=dict(width=3, color='darkmagenta')),
+                        opacity=0.68,
+                        marker=dict(size=5, color="lightseagreen", line=dict(width=2, color='darkmagenta')),
                         hoverinfo='text',
                         hovertext=htxt,
                         showlegend=False)
 
 
-def visulise_correlation(position_df, correlation_dict):
-    """Generate the correlation trace.
+def visulise_correlation(position_df, correlation_dict, corl):
+    """Generate the correlation visualisation trace.
 
     Arguments:
-        position_df -- _description_
-        correlation_dict -- _description_
+        position_df -- A dataframe of the 3D gene positions.
+        correlation_dict -- A Gene->Gene->[corr, absCorr] dictionary with the correlation values.
+        corr -- A string specifying the correlation type.
     """
     nearGenes = []
     pos_df = position_df
     for gene_ref in correlation_dict:
-        pos_df.loc[gene_ref, "Corr"] = correlation_dict[gene_ref][0]
-        pos_df.loc[gene_ref, "CorrA"] = correlation_dict[gene_ref][1]
+        pos_df.loc[gene_ref, "corr"] = correlation_dict[gene_ref][0]
+        pos_df.loc[gene_ref, "corrA"] = correlation_dict[gene_ref][1]
         # Append the list of selectes genes with a string
         nearGenes.append('<br>'.join(correlation_dict[gene_ref][2]))
-    corr = pos_df.loc[:, "Corr"].tolist()
-    corrA = pos_df.loc[:, "CorrA"].tolist()
+    corr = pos_df.loc[:, "corr"].tolist()
+    corrA = pos_df.loc[:, "corrA"].tolist()
     chroms = pos_df.loc[:, "chr"].tolist()
     # Construct the hover text list
     htext = [f"{n}<br>{m}<br>{c:3f}<br>{s}" for n, m, c, s in zip(pos_df.index, chroms, corr, nearGenes)]
     htextA = [f"{n}<br>{m}<br>{c:3f}<br>{s}" for n, m, c, s in zip(pos_df.index, chroms, corrA, nearGenes)]
-    # Construct the correlation traces
+    # Extract the coordinates
     X = pos_df.loc[:, "X"]
     Y = pos_df.loc[:, "Y"]
     Z = pos_df.loc[:, "Z"]
-    # Correlation trace
-    traceCorr = go.Scatter3d(
-        x=X,
-        y=Y,
-        z=Z,
-        ids=pos_df.index.values,
-        name="Corr",
-        hoverinfo="text",
-        hovertext=htext,
-        mode="markers",
-        opacity=0.9,
-        marker=dict(size=4, color=corr, colorscale="RdYlBu_r", showscale=True),
-        showlegend=True)
-    traces.append(traceCorr)
+    # Generate the groph objects
+    if corl == "corr":
+        # Correlation trace
+        return go.Scatter3d(x=X, y=Y, z=Z,
+                            ids=pos_df.index.values,
+                            name="Corr",
+                            hoverinfo="text",
+                            hovertext=htext,
+                            mode="markers",
+                            opacity=1,
+                            marker=dict(size=4, color=corr, colorscale="RdYlBu_r", showscale=True, colorbar=dict(orientation='h', thickness=4, xpad=30)))
+    if corl == "corrA":
+        # Absolute correlation trace
+        return go.Scatter3d(x=X, y=Y, z=Z,
+                            ids=pos_df.index.values,
+                            name="CorrABS",
+                            hoverinfo="text",
+                            hovertext=htextA,
+                            mode="markers",
+                            opacity=1,
+                            marker=dict(size=4, color=corrA, colorscale="Hot_r", showscale=True, colorbar=dict(orientation='h', thickness=4, xpad=30)))
+    else:
+        raise ValueError("Correlation type not recognised")
 
-    
-@timing
-def visualise_abs_correlation(position_df, correlation_dict):
-    # Absolute correlation trace
-    traceCorrA = go.Scatter3d(
-        x=X,
-        y=Y,
-        z=Z,
-        ids=pos_df.index.values,
-        name="CorrABS",
-        visible='legendonly',
-        hoverinfo="text",
-        hovertext=htextA,
-        mode="markers",
-        opacity=0.5,
-        marker=dict(size=4, color=corrA, colorscale="Hot_r", showscale=True),
-        showlegend=True)
-    return traceCorrA
-    
 
 @timing
 def visulise_significant_genes():
@@ -159,7 +147,7 @@ def visulise_significant_genes():
         posDF_sign.loc[gene_ref, "Corr"] = correlation_dict[gene_ref][0]
         # Append the list of selectes genes with a string
         nearGenes.append('<br>'.join(correlation_dict[gene_ref][2]))
-    corr = posDF_sign.loc[:, "Corr"].tolist()
+    corr = posDF_sign.loc[:, "corr"].tolist()
     chroms = posDF_sign.loc[:, "chr"].tolist()
     # Construct the hover text list
     htext = [f"{n}<br>{m}<br>{c:3f}<br>{s}" for n, m, c, s in zip(posDF_sign.index, chroms, corr, nearGenes)]
@@ -193,7 +181,7 @@ def visualise_user_genes(user_genes):
             posDF_sign.loc[gene_ref, "Corr"] = correlation_dict[gene_ref][0]
             # Append the list of selectes genes with a string
             nearGenes.append('<br>'.join(correlation_dict[gene_ref][2]))
-        corr = posDF_user.loc[:, "Corr"].tolist()
+        corr = posDF_user.loc[:, "corr"].tolist()
         chroms = posDF_user.loc[:, "chr"].tolist()
         htext = [f"{n}<br>{m}<br>{c:3f}<br>{s}" for n, m, c, s in zip(posDF_user.index, chroms, corr, nearGenes)]
         traceUser = go.Scatter3d(
