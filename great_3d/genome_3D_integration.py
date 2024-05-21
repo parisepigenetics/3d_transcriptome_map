@@ -54,6 +54,6 @@ def compute_gene_coordinates(dfGenes, dfGenome, resolution):
             Ys.append(point.Y + geneExtr[1])
             Zs.append(point.Z + geneExtr[2])
     # Generate the new data frame and reurn it
-    df = pd.DataFrame({"chr": chr, "start": starts, "X": Xs, "Y": Ys, "Z": Zs})
+    df = pd.DataFrame({"chr": chrs, "start": starts, "X": Xs, "Y": Ys, "Z": Zs})
     df.index = names
     return df
