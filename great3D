@@ -92,8 +92,10 @@ elif args.geneStarts:
 else:
     raise IOError("One of --gene-3Dcoords or --gene-starts arguments must be declared.")
 
-GRAPH_WIDTH = 1280  # In pixels
-GRAPH_HEIGHT = 1280
+
+GRAPH_WIDTH = 1200  # In pixels
+GRAPH_HEIGHT = 1200
+
 
 def visualise_3D(traces):
     """Render figure layout for Plotly.
@@ -108,7 +110,7 @@ def visualise_3D(traces):
                        width=GRAPH_WIDTH,
                        height=GRAPH_HEIGHT,
                        margin=dict(l=1, r=1, b=1, t=1),
-                       legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.1),
+                       legend=dict(yanchor="top", y=0.01, xanchor="right", x=0.99),
                        modebar={"orientation": "h", "bgcolor": "salmon", "color": "white", "activecolor": "#9ED3CD"},
                        hoverlabel=dict(bgcolor='rgba(255,255,255,0.7)', font=dict(color='black')),
                        modebar_add=['drawline',
@@ -158,21 +160,26 @@ app.layout = html.Div([
         dbc.Col(html.Div([
             html.H3("Options"),
             html.Hr(),
-            html.Label('Tracks:', style={'paddingTop': '2rem', 'display': 'inline-block'}),
+            html.P('Select correlation:', style={'paddingTop': '2rem', 'display': 'inline-block'}),
+            dcc.RadioItems(id='correl_track', value=None, inline=True,
+                           options=[{'label': ' Correlation  ', 'value': 'corr'},
+                                    {'label': ' |Correlation| ', 'value': 'absCorr'}
+                                    ]
+                           ),
+            html.P('Select genome visuals:', style={'paddingTop': '2rem', 'display': 'inline-block'}),
             dcc.Checklist(
-                id='input_track',
-                options=[
-                    {'label': ' Genome', 'value': 'genome'},
-                    {'label': ' Genes', 'value': 'genes'},
-                    {'label': ' Correlation', 'value': 'corr'},
-                    {'label': ' |Correlation|', 'value': 'absCorr'}
-                    ],
+                id='genome_track',
+                options=[{'label': ' Genome', 'value': 'genome'},
+                         {'label': ' Genes', 'value': 'genes'},
+                         {'label': ' Signficant genes', 'value': 'signGenes'},
+                         {'label': ' User Genes', 'value': 'usrGenes'}
+                         ],
                 value=['genome'])
             ]),
                 width=3)
         ]),
     html.Hr(),
-    html.H3("Expression Data"),
+    html.H3("Expression data table"),
     dash_table.DataTable(
         data=geneExpr.to_dict('records'),
         page_size=20,
@@ -193,31 +200,37 @@ app.layout = html.Div([
 ])
 
 
-# TODO here will go the callbacks
 @callback(
     Output('dash_GREAT', 'figure'),
-    Input('input_track', 'value')
+    [Input('genome_track', 'value'),
+     Input('correl_track', 'value')]
 )
-def update_tracks(selected_tracks):
+def update_tracks(genome_track, correl_track):
     # Visualisations:
     tracks = []
-    if "genome" in selected_tracks:
-        # Compute genome visualisation track (trace)
+    if "genome" in genome_track:
+        # Visualise genome visualisation track (trace)
         traceGenome = greatPlot.visualise_genome_3D(genomePos)
         tracks.append(traceGenome)
-    if "genes" in selected_tracks:
-        # Compute genes position track
+    if "genes" in genome_track:
+        # Visualise genes position track
         traceGenes = greatPlot.visualise_genes(genePos)
         tracks.append(traceGenes)
-#    if "corr" in selected_tracks:
-#        pass  # genePos, sum_Corr, args.userGenes)
-#    if "absCorr" in selected_tracks:
-#        pass
+    if correl_track == None:
+        pass
+    elif "corr" in correl_track:
+        # Visualise correlation
+        trackCorr = greatPlot.visulise_correlation(genePos, sum_Corr, "corr")
+        tracks.append(trackCorr)
+    elif "absCorr" in correl_track:
+        # Visualise correlation
+        trackCorrA = greatPlot.visulise_correlation(genePos, sum_Corr, "corrA")
+        tracks.append(trackCorrA)
     # 3D visualization with Plotly
     fig = visualise_3D(tracks)
-    fig.update_layout(transition_duration=10)
+    fig.update_layout(transition_duration=1)
     return fig
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)
