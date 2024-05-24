@@ -51,7 +51,7 @@ def sorting_distances(dist_df):
 
 
 @timing
-def sum_correlation(dists_sorted, geDF, no_genes, correlation_type):
+def sum_correlation(dists_sorted, geDF, no_genes):
     """Take the dictionnary of the closest genes, the gene expression file, the
     number of genes we need to compute correlation and the correlation type.
 
@@ -63,7 +63,7 @@ def sum_correlation(dists_sorted, geDF, no_genes, correlation_type):
 
     - Return:
     - A complex dictionary containing the sum of correlations, the sum of
-    absolute correlations, and the neighboring genes for each gene.
+    absolute correlations, and the n2eighboring genes for each gene.
     """
     # FIXME If a gene has zero expression we give it zero correlation immediately
     geNumpy = geDF.to_numpy()
@@ -72,7 +72,7 @@ def sum_correlation(dists_sorted, geDF, no_genes, correlation_type):
     correlation_sums = {}
     # Compute correlation matrix once
     for gene_ref, sorted_genes in dists_sorted.items():
-        # TODO check if we gain time when we paralelise this for loop!
+        # TODO check if we gain time when we parallelise this for loop!
         selected_genes = list(sorted_genes[1: no_genes+1].index)
         # Select all proximal correlations from the coorelation matrix.
         correlation = corrMat.loc[gene_ref, selected_genes]
