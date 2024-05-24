@@ -10,20 +10,19 @@ __version__ = versions['version']
 __git_revision__ = versions['full-revisionid']
 del get_versions, versions
 
-from ._version import get_versions
 __version__ = get_versions()['version']
 del get_versions
 
 
-def timing(f):
+def timing(func):
     """Wrapper to time functions.py.
 
-    Works as a decorator. Taken from https://stackoverflow.com/questions/5478351/python-time-measure-function
+    Works as a decorator, adapted from https://stackoverflow.com/questions/5478351/python-time-measure-function
     """
     def wrap(*args):
         time1 = time.time()
-        ret = f(*args)
+        ret = func(*args)
         time2 = time.time()
-        print("{:s} function took {:.3f} ms".format(f.__name__, (time2 - time1) * 1000.0))
+        print(f"{func.__name__} function took {(time2 - time1) * 1000.0:.3f} ms")
         return ret
     return wrap
