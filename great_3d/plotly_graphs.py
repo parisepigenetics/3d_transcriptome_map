@@ -3,10 +3,10 @@
 import plotly
 import plotly.graph_objects as go
 import numpy as np
+from scipy import stats
 
 # import pprint  # for testing only!
 from great_3d import timing
-from scipy import stats
 
 COLOURS = plotly.colors.qualitative.Pastel + plotly.colors.qualitative.Safe + plotly.colors.qualitative.Vivid
 
@@ -70,6 +70,14 @@ def visualise_genome_3D(genome_coords):
 
 @timing
 def visualise_genes(pos_df):
+    """Visualise genes on the 3D plot.
+
+    Arguments:
+        pos_df -- A X,Y,Z genes 3D position data frame.
+
+    Returns:
+        None
+    """
     X = pos_df.loc[:, "X"]
     Y = pos_df.loc[:, "Y"]
     Z = pos_df.loc[:, "Z"]
@@ -130,8 +138,6 @@ def visulise_correlation(position_df, correlation_dict, corl):
                             mode="markers",
                             opacity=1,
                             marker=dict(size=4, color=corrA, colorscale="Hot_r", showscale=True, colorbar=dict(orientation='h', thickness=4, xpad=30)))
-    else:
-        raise ValueError("Correlation type not recognised")
 
 
 @timing
