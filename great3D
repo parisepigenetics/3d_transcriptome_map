@@ -84,6 +84,9 @@ with args.geneExpr as fh:
     geneExpr = pd.read_table(fh)
 with args.geneStarts as fh:
     geneStarts = pd.read_table(fh)
+with args.userGenes as fh:
+    userGenes = [l.rstrip() for l in fh]
+
 # Calculate if needed the gene 3D coordinates
 if args.genePos:
     genePos = pd.read_table(args.genePos)
@@ -106,6 +109,7 @@ def visualise_3D(traces):
     """
     # Set layout elements, size, margins, legend(s)
     layout = go.Layout(plot_bgcolor="#FFF",
+                       uirevision=True,
                        autosize=False,
                        width=GRAPH_WIDTH,
                        height=GRAPH_HEIGHT,
@@ -137,7 +141,7 @@ distanceMatrix = greatCalc.calculate_distance(genePos)
 # Populate the dictionary of sorted distances.
 sortedDict = greatCalc.sorting_distances(distanceMatrix)
 # Compute a dictionnary of the sum of correlations between each gene and its neighbours.
-sum_Corr = greatCalc.sum_correlation(sortedDict, geneExpr, args.nGenes, args.mCorr)
+sum_Corr = greatCalc.sum_correlation(sortedDict, geneExpr, args.nGenes)  # TODO:Implement some additional correlation methods.
 
 
 # FIXME just to practice tables visualisation remove that later perhaps
@@ -161,20 +165,21 @@ app.layout = html.Div([
             html.H3("Options"),
             html.Hr(),
             html.P('Select correlation:', style={'paddingTop': '2rem', 'display': 'inline-block'}),
-            dcc.RadioItems(id='correl_track', value=None, inline=True,
-                           options=[{'label': ' Correlation  ', 'value': 'corr'},
-                                    {'label': ' |Correlation| ', 'value': 'absCorr'}
-                                    ]
-                           ),
+            dcc.Checklist(id='correl_track', value=['no_correl'],
+                          options=[{'label': 'Correlation    ', 'value': 'corr'},
+                                   {'label': '|Correlation|', 'value': 'absCorr'}
+                                   # {'label': 'None', 'value': 'no_correl'}
+                                   ]
+                          ),
             html.P('Select genome visuals:', style={'paddingTop': '2rem', 'display': 'inline-block'}),
             dcc.Checklist(
-                id='genome_track',
+                id='genome_track', value=['genome'],
                 options=[{'label': ' Genome', 'value': 'genome'},
                          {'label': ' Genes', 'value': 'genes'},
-                         {'label': ' Signficant genes', 'value': 'signGenes'},
+                         {'label': ' Significant genes', 'value': 'signGenes'},
                          {'label': ' User Genes', 'value': 'usrGenes'}
                          ],
-                value=['genome'])
+                )
             ]),
                 width=3)
         ]),
@@ -216,15 +221,23 @@ def update_tracks(genome_track, correl_track):
         # Visualise genes position track
         traceGenes = greatPlot.visualise_genes(genePos)
         tracks.append(traceGenes)
-    if correl_track == None:
-        pass
-    elif "corr" in correl_track:
+    if 'signGenes' in genome_track:
+        # Visualise significant genes
+        traceSig = greatPlot.visualise_significant_genes(genePos, sum_Corr)
+        tracks.append(traceSig)
+    if 'usrGenes' in genome_track:
+        # Visualise user specified genes
+        traceUsr = greatPlot.visualise_user_genes()
+        tracks.append(traceUsr)
+    if 'no_correl' in correl_track:
+        tracks = tracks
+    if "corr" in correl_track:
         # Visualise correlation
-        trackCorr = greatPlot.visulise_correlation(genePos, sum_Corr, "corr")
+        trackCorr = greatPlot.visualise_correlation(genePos, sum_Corr, "corr")
         tracks.append(trackCorr)
-    elif "absCorr" in correl_track:
+    if "absCorr" in correl_track:
         # Visualise correlation
-        trackCorrA = greatPlot.visulise_correlation(genePos, sum_Corr, "corrA")
+        trackCorrA = greatPlot.visualise_correlation(genePos, sum_Corr, "corrA")
         tracks.append(trackCorrA)
     # 3D visualization with Plotly
     fig = visualise_3D(tracks)
